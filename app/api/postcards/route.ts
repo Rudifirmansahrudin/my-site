@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // Menggunakan SERVICE_ROLE_KEY agar bisa bypass RLS saat Insert data
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SERVICE_ROLE_KEY! 
+  (process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co'),
+  (process.env.SERVICE_ROLE_KEY || 'dummy-key') 
 );
 
 export async function POST(req: Request) {
