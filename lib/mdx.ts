@@ -4,9 +4,6 @@ import path from 'path';
 import matter from 'gray-matter';
 import readingTime from 'reading-time';
 
-const postsDirectory = path.join(process.cwd(), 'content/articles');
-
-// Ini kunci utamanya: Ngasih tahu TypeScript bentuk data artikel kita
 export interface PostMeta {
   title: string;
   date: string;
@@ -14,6 +11,8 @@ export interface PostMeta {
   tags: string[];
   readingTime: string;
 }
+
+const postsDirectory = path.join(process.cwd(), 'content/articles');
 
 export function getPostSlugs() {
   if (!fs.existsSync(postsDirectory)) return [];
@@ -27,7 +26,6 @@ export function getPostBySlug(slug: string) {
   
   const { data, content } = matter(fileContents);
   
-  // Memasukkan data secara eksplisit agar dikenali TypeScript
   const meta: PostMeta = {
     title: data.title || 'Untitled',
     date: data.date || 'No Date',
