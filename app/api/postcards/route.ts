@@ -9,6 +9,10 @@ export async function POST(req: Request) {
       throw new Error("Env Supabase belum di-set");
     }
     const supabase = createClient(supabaseUrl, serviceKey);
+
+    const body = await req.json();
+    const { message, name, url, email, stampImg } = body;
+
     // 1. Validasi Dasar
     if (!message || message.length > 500 || !name) {
       return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
@@ -29,7 +33,7 @@ export async function POST(req: Request) {
         .upload(fileName, buffer, { contentType: 'image/png' });
 
       if (uploadError) throw uploadError;
-      
+
       const { data: publicUrlData } = supabase.storage.from('stamps').getPublicUrl(fileName);
       stamp_path = publicUrlData.publicUrl;
     }
