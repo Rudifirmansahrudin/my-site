@@ -1,0 +1,32 @@
+[
+    {
+      "id": 1,
+      "date": "2026-08-11",
+      "title": "Pengenalan Ekosistem Kampus",
+      "event": "PKKMB FEB UNNES",
+      "org": "Universitas Negeri Semarang",
+      "type": "Presentasi",
+      "audience": "Maba FEB",
+      "description": "Sharing session pengenalan lingkungan kampus, sistem akademik, dan cara bertahan sebagai mahasiswa baru di FEB."
+    },
+    {
+      "id": 2,
+      "date": "2025-10-15",
+      "title": "Business Plan Pitching",
+      "event": "National Case Competition",
+      "org": "BEM FEB",
+      "type": "Lomba",
+      "audience": "Juri & 50+ Mahasiswa",
+      "description": "Mempresentasikan hasil analisis SWOT, kelayakan pasar, dan proyeksi keuangan untuk inovasi produk digital di depan panel juri."
+    },
+    {
+      "id": 3,
+      "date": "2025-06-20",
+      "title": "Pentingnya Literasi Teknologi untuk Bisnis",
+      "event": "Webinar Internal Organisasi",
+      "org": "Himpunan Mahasiswa",
+      "type": "Talk",
+      "audience": "30+ Anggota",
+      "description": "Menjelaskan bagaimana tools seperti SQL, Excel tingkat lanjut, dan automasi dasar bisa mempercepat pekerjaan administrasi organisasi."
+    }
+  ]
