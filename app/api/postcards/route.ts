@@ -1,6 +1,31 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+// Wajib: cegah Next meng-cache hasil GET di production
+export const dynamic = 'force-dynamic';
 
+export async function GET() {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceKey) {
+      throw new Error("Env Supabase belum di-set");
+    }
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const { data, error } = await supabase
+      .from('postcards')
+      .select('id, message, name, url, stamp_path, country, created_at') // email sengaja tidak diikutkan
+      .eq('status', 'approved')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("API GET Error:", error);
+    return NextResponse.json({ error: "Terjadi kesalahan server" }, { status: 500 });
+  }
+}
 export async function POST(req: Request) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
