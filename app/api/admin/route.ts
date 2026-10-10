@@ -2,9 +2,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  ((process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co') || 'https://dummy.supabase.co'),
-  ((process.env.SERVICE_ROLE_KEY || 'dummy-key') || 'dummy-key') 
+cconst supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co',
+  process.env.SERVICE_ROLE_KEY || 'dummy-key'
 );
 
 export async function POST(req: Request) {
