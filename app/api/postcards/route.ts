@@ -1,16 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Menggunakan SERVICE_ROLE_KEY agar bisa bypass RLS saat Insert data
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co',
-  process.env.SERVICE_ROLE_KEY || 'dummy-key'
-);
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { message, name, url, email, stampImg } = body;
-
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!supabaseUrl || !serviceKey) {
+      throw new Error("Env Supabase belum di-set");
+    }
+    const supabase = createClient(supabaseUrl, serviceKey);
     // 1. Validasi Dasar
     if (!message || message.length > 500 || !name) {
       return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
