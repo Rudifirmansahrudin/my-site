@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-cconst supabase = createClient(
+const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co',
   process.env.SERVICE_ROLE_KEY || 'dummy-key'
 );
