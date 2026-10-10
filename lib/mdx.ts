@@ -6,6 +6,15 @@ import readingTime from 'reading-time';
 
 const postsDirectory = path.join(process.cwd(), 'content/articles');
 
+// Ini kunci utamanya: Ngasih tahu TypeScript bentuk data artikel kita
+export interface PostMeta {
+  title: string;
+  date: string;
+  summary: string;
+  tags: string[];
+  readingTime: string;
+}
+
 export function getPostSlugs() {
   if (!fs.existsSync(postsDirectory)) return [];
   return fs.readdirSync(postsDirectory).filter(file => file.endsWith('.mdx'));
@@ -16,15 +25,20 @@ export function getPostBySlug(slug: string) {
   const fullPath = path.join(postsDirectory, `${realSlug}.mdx`);
   const fileContents = fs.readFileSync(fullPath, 'utf8');
   
-  // Parse frontmatter pakai gray-matter
   const { data, content } = matter(fileContents);
   
+  // Memasukkan data secara eksplisit agar dikenali TypeScript
+  const meta: PostMeta = {
+    title: data.title || 'Untitled',
+    date: data.date || 'No Date',
+    summary: data.summary || '',
+    tags: data.tags || [],
+    readingTime: readingTime(content).text,
+  };
+
   return {
     slug: realSlug,
-    meta: {
-      ...data,
-      readingTime: readingTime(content).text,
-    },
+    meta,
     content,
   };
 }
@@ -33,7 +47,6 @@ export function getAllPosts() {
   const slugs = getPostSlugs();
   const posts = slugs
     .map((slug) => getPostBySlug(slug))
-    // Urutkan dari yang paling baru
     .sort((a, b) => (new Date(b.meta.date).getTime() - new Date(a.meta.date).getTime()));
   return posts;
 }
