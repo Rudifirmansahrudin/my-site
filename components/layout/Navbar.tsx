@@ -34,8 +34,6 @@ export default function Navbar() {
           <Link href="/postcards" className="hover:text-indigo-600 transition-colors">Postcards</Link>
           <Link href="/speaking" className="hover:text-indigo-600 transition-colors">Speaking</Link>
           <Link href="/create" className="hover:text-indigo-600 transition-colors">Create</Link>
-          
-          {/* ---> TAMBAHKAN MENU INI UNTUK ARTIKEL <--- */}
           <Link href="/writing" className="hover:text-indigo-600 transition-colors font-bold text-indigo-500">Writing</Link>
      
           {/* Dropdown Resources */}
@@ -46,6 +44,10 @@ export default function Navbar() {
             <div className="absolute top-full left-0 mt-0 w-40 bg-white border border-gray-100 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col py-2">
               <Link href="/resources/books" className="px-4 py-2 hover:bg-gray-50">Books</Link>
               <Link href="/resources/movies" className="px-4 py-2 hover:bg-gray-50">Movies</Link>
+              
+              {/* ---> TAMBAHAN MENU GAMING <--- */}
+              <Link href="/resources/games" className="px-4 py-2 hover:bg-gray-50">Gaming</Link>
+              
               <Link href="/resources/bookmarks" className="px-4 py-2 hover:bg-gray-50">Bookmarks</Link>
               <Link href="/resources/media-kit" className="px-4 py-2 hover:bg-gray-50">Media Kit</Link>
             </div>
@@ -70,9 +72,10 @@ export default function Navbar() {
           <Link href="/postcards" onClick={() => setMobileMenuOpen(false)}>Postcards</Link>
           <Link href="/speaking" onClick={() => setMobileMenuOpen(false)}>Speaking</Link>
           <Link href="/create" onClick={() => setMobileMenuOpen(false)}>Create</Link>
-          
-          {/* ---> TAMBAHKAN MENU INI UNTUK ARTIKEL DI HP <--- */}
           <Link href="/writing" onClick={() => setMobileMenuOpen(false)}>Writing</Link>
+          
+          {/* ---> TAMBAHAN MENU GAMING MOBILE <--- */}
+          <Link href="/resources/games" onClick={() => setMobileMenuOpen(false)}>Gaming</Link>
           
           <Link href="/resources" onClick={() => setMobileMenuOpen(false)}>Resources</Link>
           <Link href="/about" onClick={() => setMobileMenuOpen(false)}>About</Link>
