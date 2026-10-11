@@ -36,6 +36,39 @@ function sectionOf(category: string | null): SectionKey {
   return "other";
 }
 
+// Cover: object-contain + backdrop blur supaya gambar tidak terpotong.
+// "No Cover" hanya muncul kalau URL kosong atau gambar gagal dimuat.
+function Cover({ src, title }: { src: string | null; title: string }) {
+  const [failed, setFailed] = useState(false);
+  const show = !!src && !failed;
+
+  return (
+    <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden group">
+      {show ? (
+        <>
+          <img
+            src={src as string}
+            alt=""
+            aria-hidden="true"
+            onError={() => setFailed(true)}
+            className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-60 pointer-events-none"
+          />
+          <img
+            src={src as string}
+            alt={title}
+            onError={() => setFailed(true)}
+            className="relative w-full h-full object-contain p-8 drop-shadow-md pointer-events-none transition-transform duration-500 group-hover:scale-105"
+          />
+        </>
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center text-gray-300 font-mono text-sm">
+          No Cover
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function GamesPage() {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,29 +164,7 @@ export default function GamesPage() {
               {section.items.map((game) => (
                 <TiltCard key={game.id}>
                   <div className="bg-white border border-[#e8e4d9] rounded-2xl shadow-xl overflow-hidden flex flex-col h-full">
-                    {/* Cover: object-contain + backdrop blur supaya logo tidak terpotong */}
-                    <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden group">
-                      <div className="absolute inset-0 flex items-center justify-center text-gray-300 font-mono text-sm">
-                        No Cover
-                      </div>
-                      {game.cover_url && (
-                        <>
-                          <img
-                            src={game.cover_url}
-                            alt=""
-                            aria-hidden="true"
-                            onError={(e) => { e.currentTarget.style.display = "none"; }}
-                            className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-60 pointer-events-none"
-                          />
-                          <img
-                            src={game.cover_url}
-                            alt={game.title}
-                            onError={(e) => { e.currentTarget.style.display = "none"; }}
-                            className="relative w-full h-full object-contain p-8 drop-shadow-md pointer-events-none transition-transform duration-500 group-hover:scale-105"
-                          />
-                        </>
-                      )}
-                    </div>
+                    <Cover src={game.cover_url} title={game.title} />
 
                     {/* Konten */}
                     <div className="p-6 flex flex-col gap-4 flex-grow">
