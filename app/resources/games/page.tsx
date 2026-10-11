@@ -13,15 +13,16 @@ type Game = {
   id: number | string;
   created_at: string;
   title: string;
-  category: string | null; // Kolom lama (buat jaga-jaga)
-  status: string | null;   // Kolom baru
+  category: string | null; 
+  status: string | null;   
   cover_url: string | null;
   photo_url: string | null;
-  description: string | null; // Kolom lama
-  tagline: string | null;     // Kolom baru
-  highlights: string | null;  // Kolom baru
-  notes: string | null;       // Kolom baru
-  platforms: string | null;   // Kolom baru
+  description: string | null; 
+  tagline: string | null;     
+  highlights: string | null;  
+  notes: string | null;       
+  platforms: string | null;   
+  sort_order?: number | null; // Tambahan buat ngatur urutan manual
 };
 
 type SectionKey = "ongoing" | "finished" | "wishlist" | "other";
@@ -101,6 +102,9 @@ export default function GamesPage() {
         const { data, error } = await supabase
           .from("games")
           .select("*")
+          // Urutkan berdasarkan angka sort_order terkecil dulu (1, 2, 3...)
+          .order("sort_order", { ascending: true }) 
+          // Kalau angkanya sama (misal sama-sama null atau 999), urutkan yang paling baru ditambah
           .order("created_at", { ascending: false });
 
         if (error) throw error;
