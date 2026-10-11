@@ -8,44 +8,60 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dummy.supab
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy-key";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Tipe Data disesuaikan dengan kolom database lu yang baru
 type Game = {
   id: number | string;
   created_at: string;
   title: string;
-  category: string | null;
+  category: string | null; // Kolom lama (buat jaga-jaga)
+  status: string | null;   // Kolom baru
   cover_url: string | null;
   photo_url: string | null;
-  description: string | null;
+  description: string | null; // Kolom lama
+  tagline: string | null;     // Kolom baru
+  highlights: string | null;  // Kolom baru
+  notes: string | null;       // Kolom baru
+  platforms: string | null;   // Kolom baru
 };
 
 type SectionKey = "ongoing" | "finished" | "wishlist" | "other";
 
+// List Kategori + Subtitle Curhatan Lu
 const SECTIONS: { key: SectionKey; label: string; desc: string; dot: string }[] = [
-  { key: "ongoing", label: "Ongoing", desc: "Lagi dimainkan sekarang", dot: "bg-emerald-500" },
+  { key: "ongoing", label: "Ongoing", desc: "Doain masalah hidup gua dikit biar bisa lanjutin", dot: "bg-emerald-500" },
   { key: "finished", label: "Finished", desc: "Sudah tamat atau ditaklukkan", dot: "bg-indigo-500" },
   { key: "wishlist", label: "Wishlist", desc: "Belum dimainkan, tapi masuk antrean", dot: "bg-amber-500" },
   { key: "other", label: "Other", desc: "Kategori belum diatur", dot: "bg-gray-400" },
 ];
 
-// Samakan variasi penulisan: "Ongoing", "On Going", "on-going" -> "ongoing"
-function sectionOf(category: string | null): SectionKey {
-  const c = (category ?? "").toLowerCase().replace(/[^a-z]/g, "");
+function sectionOf(game: Game): SectionKey {
+  // Ambil dari kolom status baru, kalau kosong ambil dari kolom category lama
+  const c = (game.status || game.category || "").toLowerCase().replace(/[^a-z]/g, "");
   if (c === "ongoing" || c === "playing") return "ongoing";
   if (c === "finished" || c === "completed" || c === "conquered" || c === "done") return "finished";
   if (c === "wishlist" || c === "wish") return "wishlist";
   return "other";
 }
 
-// Cover: object-contain + backdrop blur supaya gambar tidak terpotong.
-// "No Cover" hanya muncul kalau URL kosong atau gambar gagal dimuat.
+// Komponen Cover: Menangani Cover Resmi & Fallback Inisial Otomatis
 function Cover({ src, title }: { src: string | null; title: string }) {
   const [failed, setFailed] = useState(false);
   const show = !!src && !failed;
 
+  // Generate Inisial (Contoh: "Red Dead Redemption" -> "RD")
+  const initials = title
+    .split(" ")
+    .filter((w) => w.length > 0)
+    .map((w) => w[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase();
+
   return (
-    <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden group">
+    <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-indigo-50 to-gray-100 overflow-hidden group border-b border-gray-100">
       {show ? (
         <>
+          {/* Background Blur Effect */}
           <img
             src={src as string}
             alt=""
@@ -53,16 +69,20 @@ function Cover({ src, title }: { src: string | null; title: string }) {
             onError={() => setFailed(true)}
             className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-60 pointer-events-none"
           />
+          {/* Main Image */}
           <img
             src={src as string}
             alt={title}
             onError={() => setFailed(true)}
-            className="relative w-full h-full object-contain p-8 drop-shadow-md pointer-events-none transition-transform duration-500 group-hover:scale-105"
+            className="relative w-full h-full object-contain p-4 drop-shadow-md pointer-events-none transition-transform duration-500 group-hover:scale-105"
           />
         </>
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center text-gray-300 font-mono text-sm">
-          No Cover
+        // Fallback: Tampilan Inisial ala "Cara Paling Malas"
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-tr from-gray-100 to-gray-50">
+          <span className="text-5xl font-bold font-sans text-gray-300/80 tracking-tighter drop-shadow-sm group-hover:scale-110 transition-transform duration-500">
+            {initials}
+          </span>
         </div>
       )}
     </div>
@@ -93,7 +113,6 @@ export default function GamesPage() {
       }
     }
 
-    // Jangan nge-fetch kalau pakai kunci dummy
     if (supabaseUrl !== "https://dummy.supabase.co") {
       fetchGames();
     } else {
@@ -102,7 +121,7 @@ export default function GamesPage() {
     }
   }, []);
 
-  // Lightbox: tutup dengan Esc, kunci scroll halaman selagi terbuka
+  // Kunci scroll halaman saat lightbox foto dibuka
   useEffect(() => {
     if (!lightbox) return;
     const onKey = (e: KeyboardEvent) => {
@@ -119,8 +138,8 @@ export default function GamesPage() {
 
   const grouped = SECTIONS.map((s) => ({
     ...s,
-    items: games.filter((g) => sectionOf(g.category) === s.key),
-  })).filter((s) => s.items.length > 0); // section kosong disembunyikan
+    items: games.filter((g) => sectionOf(g) === s.key),
+  })).filter((s) => s.items.length > 0);
 
   return (
     <div className="max-w-5xl mx-auto py-32 px-6 min-h-screen">
@@ -146,7 +165,7 @@ export default function GamesPage() {
       ) : (
         grouped.map((section) => (
           <section key={section.key} className="mb-20">
-            {/* Heading kategori */}
+            {/* Heading kategori & Subtitle Curhatan Lu */}
             <div className="flex items-end justify-between border-b border-gray-200 pb-4 mb-10">
               <div>
                 <h2 className="text-2xl font-bold font-sans tracking-tight flex items-center gap-3 text-gray-900">
@@ -161,72 +180,104 @@ export default function GamesPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-              {section.items.map((game) => (
-                <TiltCard key={game.id}>
-                  <div className="bg-white border border-[#e8e4d9] rounded-2xl shadow-xl overflow-hidden flex flex-col h-full">
-                    <Cover src={game.cover_url} title={game.title} />
+              {section.items.map((game) => {
+                // Ambil notes (baru) atau description (lama)
+                const textDesc = game.notes || game.description; 
+                
+                return (
+                  <TiltCard key={game.id}>
+                    <div className="bg-white border border-[#e8e4d9] rounded-2xl shadow-xl overflow-hidden flex flex-col h-full">
+                      
+                      <Cover src={game.cover_url} title={game.title} />
 
-                    {/* Konten */}
-                    <div className="p-6 flex flex-col gap-4 flex-grow">
-                      <h3 className="font-bold text-xl font-sans text-gray-900">{game.title}</h3>
-                      {game.description && (
-                        <p className="text-sm text-gray-600 font-sans leading-relaxed">{game.description}</p>
-                      )}
+                      {/* Konten Text */}
+                      <div className="p-6 flex flex-col gap-4 flex-grow">
+                        <div>
+                          {/* Platforms Badges */}
+                          {game.platforms && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {game.platforms.split(',').map((p, i) => (
+                                <span key={i} className="text-[9px] bg-gray-100 text-gray-500 px-2 py-1 rounded uppercase tracking-widest font-mono">
+                                  {p.trim()}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          
+                          <h3 className="font-bold text-xl font-sans text-gray-900 leading-tight">{game.title}</h3>
+                          
+                          {/* Tagline */}
+                          {game.tagline && (
+                            <p className="text-indigo-600 font-medium text-sm mt-1 italic">"{game.tagline}"</p>
+                          )}
+                        </div>
 
-                      {/* Foto pribadi: klik untuk zoom */}
-                      {game.photo_url && (
-                        <button
-                          type="button"
-                          onClick={() => setLightbox({ src: game.photo_url as string, title: game.title })}
-                          className="mt-auto pt-4 border-t border-gray-100 flex items-center gap-4 text-left cursor-zoom-in group/photo"
-                          aria-label={`Perbesar foto ${game.title}`}
-                        >
-                          <span className="relative w-16 h-16 shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-md ring-1 ring-gray-200">
-                            <img
-                              src={game.photo_url}
-                              alt={`Foto ${game.title}`}
-                              onError={(e) => { e.currentTarget.style.display = "none"; }}
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover/photo:scale-110"
-                            />
-                          </span>
-                          <span className="flex flex-col">
-                            <span className="text-[9px] text-gray-400 font-mono uppercase tracking-widest">
-                              Personal Capture
+                        {/* Highlights / Chips */}
+                        {game.highlights && (
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {game.highlights.split(',').map((h, i) => (
+                              <span key={i} className="text-[10px] font-bold border border-gray-200 text-gray-600 px-2.5 py-1 rounded-full">
+                                {h.trim()}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Notes / Cerita Panjang Lu */}
+                        {textDesc && (
+                          <p className="text-sm text-gray-600 font-sans leading-relaxed flex-grow mt-2">
+                            {textDesc}
+                          </p>
+                        )}
+
+                        {/* Personal Capture Photo */}
+                        {game.photo_url && (
+                          <button
+                            type="button"
+                            onClick={() => setLightbox({ src: game.photo_url as string, title: game.title })}
+                            className="mt-4 pt-4 border-t border-gray-100 flex items-center gap-4 text-left cursor-zoom-in group/photo"
+                          >
+                            <span className="relative w-14 h-14 shrink-0 overflow-hidden rounded-xl border-2 border-white shadow-sm ring-1 ring-gray-200">
+                              <img
+                                src={game.photo_url}
+                                alt={`Foto ${game.title}`}
+                                onError={(e) => { e.currentTarget.style.display = "none"; }}
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover/photo:scale-110"
+                              />
                             </span>
-                            <span className="text-sm font-bold text-gray-700">Rudi's Gallery</span>
-                            <span className="text-[10px] text-indigo-500 font-mono mt-0.5">Klik untuk perbesar</span>
-                          </span>
-                        </button>
-                      )}
+                            <span className="flex flex-col">
+                              <span className="text-[9px] text-gray-400 font-mono uppercase tracking-widest">Personal Capture</span>
+                              <span className="text-sm font-bold text-gray-700">Rudi's Gallery</span>
+                              <span className="text-[10px] text-indigo-500 font-mono mt-0.5">Klik untuk perbesar</span>
+                            </span>
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </TiltCard>
-              ))}
+                  </TiltCard>
+                );
+              })}
             </div>
           </section>
         ))
       )}
 
-      {/* Lightbox: sengaja di level halaman, di luar TiltCard (transform merusak position: fixed) */}
+      {/* Lightbox / Zoom-in Foto */}
       {lightbox && (
         <div
           className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 cursor-zoom-out"
           onClick={() => setLightbox(null)}
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Foto ${lightbox.title}`}
         >
           <button
             type="button"
             onClick={() => setLightbox(null)}
             className="absolute top-5 right-5 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors"
-            aria-label="Tutup"
           >
             ✕
           </button>
           <img
             src={lightbox.src}
-            alt={`Foto ${lightbox.title}`}
+            alt={lightbox.title}
             onClick={(e) => e.stopPropagation()}
             className="max-h-[90vh] max-w-[95vw] object-contain rounded-xl shadow-2xl cursor-default"
           />
