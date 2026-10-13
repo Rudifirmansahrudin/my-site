@@ -1,15 +1,21 @@
-// app/movies/page.tsx  (server component: data diambil dari Supabase, di-cache 60 detik)
+// app/movies/page.tsx  (server component: data diambil dari Supabase, selalu fresh)
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { coverSwatch, TINT, TINT_EDGE } from "@/lib/palette";
 
-export const revalidate = 60;
+// Matikan cache: review baru langsung muncul tanpa nunggu
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Movies",
   description: "Reviews of the films everyone is talking about. Short verdict first, full review one click away.",
 };
+
+// DEBUG SEMENTARA: tampilkan host Supabase yang dipakai. Hapus setelah beres.
+const supaHost = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host
+  : "(kosong)";
 
 type Movie = {
   id: string;
@@ -65,7 +71,7 @@ function Poster({ movie, className = "" }: { movie: Movie; className?: string })
       )}
       {showRating && (
         <span className="absolute bottom-2 left-2 rounded border border-gray-900/10 bg-white/95 px-1.5 py-0.5 font-mono text-xs font-bold text-gray-900">
-          {movie.rating!.toFixed(1)}
+          {Number(movie.rating).toFixed(1)}
         </span>
       )}
     </div>
@@ -126,7 +132,7 @@ function Featured({ movie }: { movie: Movie }) {
 
             <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
               {movie.rating !== null && (
-                <span className="font-mono font-bold text-gray-900">{movie.rating.toFixed(1)}/10</span>
+                <span className="font-mono font-bold text-gray-900">{Number(movie.rating).toFixed(1)}/10</span>
               )}
               {movie.spoiler_free && (
                 <span className="rounded-full bg-[#FFF0A8] px-2.5 py-0.5 text-xs text-gray-900">Spoiler-free</span>
@@ -195,6 +201,11 @@ export default async function MoviesPage() {
           Reviews of the films everyone is talking about. Short verdict first, full review one click away.
         </p>
       </header>
+
+      {/* DEBUG SEMENTARA: hapus baris ini kalau data sudah muncul */}
+      <p className="font-mono text-xs text-gray-400">
+        debug: {supaHost} · {movies.length} rows{errorMsg ? ` · ${errorMsg}` : ""}
+      </p>
 
       {errorMsg && (
         <div className="rounded-lg border border-[#F2A9C9] bg-[#FBD3E5] p-4 font-mono text-sm text-gray-900">
