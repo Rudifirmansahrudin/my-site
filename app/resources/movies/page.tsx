@@ -57,20 +57,29 @@ function ReviewLink({ movie, className, children }: { movie: Movie; className?: 
 function Poster({ movie, className = "" }: { movie: Movie; className?: string }) {
   const sw = coverSwatch(movie.title, movie.cover_color);
   const showRating = movie.review_url && movie.rating !== null;
+  
   return (
+    // DI SINI KUNCINYA: w-full aspect-[2/3] memastikan rasio selalu poster film
     <div
-      className={`relative aspect-[2/3] overflow-hidden rounded-md shadow-md ${className}`}
+      className={`relative w-full aspect-[2/3] overflow-hidden rounded-lg shadow-md ${className}`}
       style={{ backgroundColor: sw.bg, border: `1px solid ${sw.edge}` }}
     >
-      <span className="absolute inset-0 grid place-items-center p-3 text-center text-sm font-bold leading-snug text-gray-900">
-        {movie.title}
-      </span>
+      {/* Jika tidak ada poster URL, tampilkan judul di pojok kiri bawah (Bold typography style) */}
+      {!movie.poster_url && (
+         <div className="absolute inset-0 flex items-end justify-start p-4 bg-gradient-to-t from-black/10 to-transparent">
+            <span className="text-xl md:text-2xl font-bold font-sans text-gray-900 leading-tight drop-shadow-sm">
+                {movie.title}
+            </span>
+         </div>
+      )}
+      
       {movie.poster_url && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={movie.poster_url} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={movie.poster_url} alt={movie.title} loading="lazy" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
       )}
+      
       {showRating && (
-        <span className="absolute bottom-2 left-2 rounded border border-gray-900/10 bg-white/95 px-1.5 py-0.5 font-mono text-xs font-bold text-gray-900">
+        <span className="absolute bottom-3 left-3 z-10 rounded border border-gray-900/10 bg-white/95 px-1.5 py-0.5 font-mono text-xs font-bold text-gray-900 shadow-sm">
           {Number(movie.rating).toFixed(1)}
         </span>
       )}
@@ -81,32 +90,40 @@ function Poster({ movie, className = "" }: { movie: Movie; className?: string })
 function MovieCard({ movie }: { movie: Movie }) {
   const reviewed = Boolean(movie.review_url);
   return (
-    <ReviewLink movie={movie} className={`group block rounded-md ${focusRing}`}>
+    <ReviewLink movie={movie} className={`group block rounded-md ${focusRing} flex flex-col h-full`}>
       <Poster
         movie={movie}
-        className={`motion-safe:transition-transform motion-safe:duration-200 ${
-          reviewed ? "motion-safe:group-hover:-translate-y-1" : "opacity-70"
+        className={`motion-safe:transition-transform motion-safe:duration-300 ${
+          reviewed ? "motion-safe:group-hover:-translate-y-2 motion-safe:group-hover:shadow-xl" : "opacity-90 motion-safe:group-hover:-translate-y-1"
         }`}
       />
-      <h3 className="mt-3 line-clamp-2 text-base font-bold leading-snug text-gray-900">{movie.title}</h3>
-      <p className="mt-0.5 text-sm text-gray-600">
-        {[movie.year, movie.director].filter(Boolean).join(" · ")}
-      </p>
-      {movie.verdict && (
-        <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-gray-700">{movie.verdict}</p>
-      )}
-      <p
-        className={`mt-3 text-sm ${
-          reviewed
-            ? "font-semibold text-gray-900 underline decoration-[#B9A5F0] decoration-2 underline-offset-4 group-hover:decoration-gray-900"
-            : "text-gray-500"
-        }`}
-      >
-        {actionLabel(movie)}
-        {reviewed && movie.spoiler_free && (
-          <span className="ml-2 font-normal text-gray-500 no-underline">Spoiler-free</span>
+      <div className="mt-4 flex flex-col flex-grow">
+        <h3 className="line-clamp-2 text-lg font-bold font-sans leading-snug text-gray-900">{movie.title}</h3>
+        <p className="mt-1 text-xs font-mono tracking-wide text-gray-500">
+          {[movie.year, movie.director].filter(Boolean).join(" · ")}
+        </p>
+        
+        {/* Verdict: Dibuat seperti quote tipis */}
+        {movie.verdict && (
+          <div className="mt-3 border-l-2 border-indigo-200 pl-3">
+             <p className="line-clamp-3 text-sm font-sans leading-relaxed text-gray-600 italic">"{movie.verdict}"</p>
+          </div>
         )}
-      </p>
+        
+        {/* Action / Review Link selalu terdorong ke bawah */}
+        <p
+          className={`mt-auto pt-4 text-xs font-mono uppercase tracking-widest ${
+            reviewed
+              ? "font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+              : "text-gray-400"
+          }`}
+        >
+          {actionLabel(movie)}
+          {reviewed && movie.spoiler_free && (
+            <span className="ml-3 font-normal text-gray-400 no-underline lowercase tracking-normal">Spoiler-free</span>
+          )}
+        </p>
+      </div>
     </ReviewLink>
   );
 }
@@ -114,31 +131,34 @@ function MovieCard({ movie }: { movie: Movie }) {
 function Featured({ movie }: { movie: Movie }) {
   return (
     <section className="space-y-4">
-      <h2 className="text-xl font-bold text-gray-700">Latest review</h2>
-      <div className="rounded-[14px] border p-5 sm:p-8" style={{ backgroundColor: TINT, borderColor: TINT_EDGE }}>
-        <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
-          <Poster movie={movie} className="w-40 shrink-0 sm:w-52" />
+      <h2 className="text-xl font-bold font-sans tracking-tight text-gray-900">Latest review</h2>
+      <div className="rounded-[16px] border p-6 sm:p-8 shadow-sm transition-all" style={{ backgroundColor: TINT, borderColor: TINT_EDGE }}>
+        <div className="flex flex-col gap-6 sm:flex-row sm:gap-10">
+          {/* Lebar poster Featured dipastikan dengan max-w */}
+          <div className="w-full sm:w-48 lg:w-56 shrink-0 mx-auto sm:mx-0">
+             <Poster movie={movie} className="w-full shadow-lg" />
+          </div>
 
           <div className="flex min-w-0 flex-col justify-center">
-            <h3 className="text-2xl font-bold leading-tight text-gray-900 sm:text-3xl">{movie.title}</h3>
-            <p className="mt-1 text-sm text-gray-600">
+            <h3 className="text-3xl font-extrabold font-sans tracking-tight leading-tight text-gray-900 md:text-4xl">{movie.title}</h3>
+            <p className="mt-2 text-sm font-mono text-gray-600">
               {[movie.year, movie.director].filter(Boolean).join(" · ")}
-              {movie.reviewed_at && <> · Reviewed {formatDate(movie.reviewed_at)}</>}
+              {movie.reviewed_at && <> <span className="mx-2">|</span> {formatDate(movie.reviewed_at)}</>}
             </p>
 
             {movie.verdict && (
-              <p className="mt-5 max-w-prose text-lg leading-relaxed text-gray-800">{movie.verdict}</p>
+              <p className="mt-6 max-w-2xl text-lg font-sans leading-relaxed text-gray-700">{movie.verdict}</p>
             )}
 
-            <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+            <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
               {movie.rating !== null && (
-                <span className="font-mono font-bold text-gray-900">{Number(movie.rating).toFixed(1)}/10</span>
+                <span className="font-mono font-bold text-lg text-indigo-600">{Number(movie.rating).toFixed(1)}/10</span>
               )}
               {movie.spoiler_free && (
-                <span className="rounded-full bg-[#FFF0A8] px-2.5 py-0.5 text-xs text-gray-900">Spoiler-free</span>
+                <span className="rounded-full bg-[#FFF0A8] px-3 py-1 text-xs font-bold font-mono text-yellow-900">Spoiler-free</span>
               )}
               {(movie.tags ?? []).map((t) => (
-                <span key={t} className="rounded-full bg-[#FBD3E5] px-2.5 py-0.5 text-xs text-gray-900">
+                <span key={t} className="rounded-full bg-[#FBD3E5] px-3 py-1 text-xs font-bold font-mono text-pink-900">
                   {t}
                 </span>
               ))}
@@ -146,7 +166,7 @@ function Featured({ movie }: { movie: Movie }) {
 
             <ReviewLink
               movie={movie}
-              className={`mt-6 inline-flex w-fit items-center rounded-lg border border-[#B39CF0] bg-[#C9B8F5] px-5 py-2.5 text-sm font-semibold text-gray-900 hover:bg-[#B9A5F0] ${focusRing}`}
+              className={`mt-8 inline-flex w-fit items-center rounded-full border border-[#B39CF0] bg-[#C9B8F5] px-6 py-3 text-sm font-bold font-sans text-indigo-900 hover:bg-[#B9A5F0] transition-colors shadow-sm ${focusRing}`}
             >
               {movie.review_format === "video" ? "Watch the review" : "Read the full review"}
             </ReviewLink>
@@ -160,11 +180,12 @@ function Featured({ movie }: { movie: Movie }) {
 function Grid({ title, list }: { title: string; list: Movie[] }) {
   if (list.length === 0) return null;
   return (
-    <section className="space-y-5">
-      <h2 className="text-xl font-bold text-gray-700">{title}</h2>
-      <ul className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:grid-cols-4">
+    <section className="space-y-6 pt-6">
+      <h2 className="text-xl font-bold font-sans tracking-tight text-gray-900">{title}</h2>
+      {/* Menggunakan grid-cols-2 di HP, 3 di tablet, 4 di desktop besar */}
+      <ul className="grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-4">
         {list.map((m) => (
-          <li key={m.id}>
+          <li key={m.id} className="flex">
             <MovieCard movie={m} />
           </li>
         ))}
@@ -194,30 +215,41 @@ export default async function MoviesPage() {
   const upNext = movies.filter((m) => !m.review_url);
 
   return (
-    <div className="space-y-14 pb-24">
-      <header className="space-y-3">
-        <h1 className="text-4xl font-bold">Movies</h1>
-        <p className="max-w-prose text-base leading-relaxed text-gray-600">
+    <div className="space-y-16 pb-24 max-w-6xl mx-auto">
+      <header className="space-y-4 text-center md:text-left pt-6">
+        <h1 className="text-4xl md:text-5xl font-extrabold font-sans tracking-tight text-gray-900">Movies</h1>
+        <p className="max-w-2xl text-base md:text-lg leading-relaxed font-sans text-gray-600 mx-auto md:mx-0">
           Reviews of the films everyone is talking about. Short verdict first, full review one click away.
         </p>
       </header>
 
       {/* DEBUG SEMENTARA: hapus baris ini kalau data sudah muncul */}
-      <p className="font-mono text-xs text-gray-400">
-        debug: {supaHost} · {movies.length} rows{errorMsg ? ` · ${errorMsg}` : ""}
-      </p>
+      <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 w-fit mx-auto md:mx-0">
+        <p className="font-mono text-xs text-gray-400">
+            debug: {supaHost} · {movies.length} rows{errorMsg ? ` · ${errorMsg}` : ""}
+        </p>
+      </div>
 
       {errorMsg && (
-        <div className="rounded-lg border border-[#F2A9C9] bg-[#FBD3E5] p-4 font-mono text-sm text-gray-900">
+        <div className="rounded-xl border border-[#F2A9C9] bg-[#FBD3E5] p-6 font-mono text-sm text-pink-900 shadow-sm">
           {errorMsg}
         </div>
       )}
 
-      {!errorMsg && movies.length === 0 && <p className="text-gray-500">No reviews yet.</p>}
+      {!errorMsg && movies.length === 0 && (
+          <div className="border-2 border-dashed border-gray-200 rounded-2xl p-12 text-center text-gray-500 font-mono">
+              No reviews yet.
+          </div>
+      )}
 
-      {latest && <Featured movie={latest} />}
-      <Grid title="All reviews" list={rest} />
+      {/* Sengaja dimatikan sementara karena 'latest' dari dummy data belum punya review_url. 
+          Buka comment-nya nanti kalau review pertama lu udah ada.
+      */}
+      {/* {latest && <Featured movie={latest} />} */}
+      
+      {/* Sementara dummy data belum direview, tampilkan semuanya di 'Up next' */}
       <Grid title="Up next" list={upNext} />
+      {/* <Grid title="All reviews" list={rest} /> */}
     </div>
   );
 }
