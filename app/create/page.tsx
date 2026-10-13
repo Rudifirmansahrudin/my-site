@@ -1,99 +1,159 @@
-// app/create/page.tsx
 "use client";
-import { Card } from "@/components/ui/Card";
-import { Chip } from "@/components/ui/Chip";
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { createClient } from "@supabase/supabase-js";
 
-// Dummy Data Proyek
-const projects = [
-  {
-    id: 1,
-    title: "Market Insight Dashboard",
-    description: "A comprehensive dashboard for tracking market trends, analyzing competitor pricing, and visualizing business data for faster decision-making.",
-    tech: ["Next.js", "Tailwind CSS", "Recharts", "Supabase"],
-    demoLink: "#",
-    repoLink: "#"
-  },
-  {
-    id: 2,
-    title: "Campus Thrift",
-    description: "An e-commerce platform built specifically for university students to buy, sell, and trade pre-loved textbooks and dorm essentials safely.",
-    tech: ["React", "Firebase", "Stripe API"],
-    demoLink: "#",
-    repoLink: "#"
-  },
-  {
-    id: 3,
-    title: "Automated Data Scraper",
-    description: "A web scraping script designed to extract pricing data from various e-commerce websites and consolidate it into a clean, structured CSV.",
-    tech: ["Python", "BeautifulSoup", "Pandas"],
-    demoLink: "#",
-    repoLink: "#"
-  },
-  {
-    id: 4,
-    title: "Freelance Client Portal",
-    description: "A secure, minimalistic portal for clients to view project progress, download deliverables, and manage invoices in one place.",
-    tech: ["Next.js", "Prisma", "PostgreSQL"],
-    demoLink: "#",
-    repoLink: "#"
-  }
-];
+// Koneksi Supabase
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dummy.supabase.co";
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy-key";
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+type Project = {
+  id: string;
+  title: string;
+  description: string;
+  tech_stack: string[];
+  github_url: string | null;
+  live_url: string | null;
+  sort_order: number;
+};
+
+// Ikon sederhana berbasis SVG
+const GithubIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+  </svg>
+);
+
+const ExternalLinkIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+    <polyline points="15 3 21 3 21 9"></polyline>
+    <line x1="10" y1="14" x2="21" y2="3"></line>
+  </svg>
+);
 
 export default function CreatePage() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    async function fetchProjects() {
+      try {
+        const { data, error } = await supabase
+          .from("projects")
+          .select("*")
+          .order("sort_order", { ascending: true });
+
+        if (error) throw error;
+        setProjects((data as Project[]) || []);
+      } catch (err: any) {
+        console.error("Gagal narik data proyek:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (supabaseUrl !== "https://dummy.supabase.co") {
+      fetchProjects();
+    } else {
+      setError("File .env.local belum diatur kuncinya nih bro!");
+      setLoading(false);
+    }
+  }, []);
+
   return (
-    <div className="space-y-16 pb-24 max-w-5xl mx-auto pt-10">
+    <div className="space-y-16 pb-24 max-w-5xl mx-auto">
       
-      {/* HEADER */}
-      <section className="space-y-4 text-center max-w-2xl mx-auto">
-        <h1 className="text-5xl font-sans font-bold">Create</h1>
-        <p className="font-mono text-gray-500 leading-relaxed">
+      {/* Header Section */}
+      <header className="space-y-6 text-center pt-10">
+        <h1 className="text-4xl md:text-5xl font-extrabold font-sans tracking-tight text-gray-900">Create</h1>
+        <p className="max-w-2xl mx-auto text-base md:text-lg leading-relaxed font-sans text-gray-600">
           Things I've built, broken, and fixed. A collection of tools, dashboards, and applications bridging business needs with technical solutions.
         </p>
-      </section>
+      </header>
 
-      {/* PROJECT GRID */}
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {projects.map((project, idx) => (
-          <motion.div
-            key={project.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-          >
-            <Card className="h-full flex flex-col justify-between bg-white border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all group">
+      {/* State Handlers */}
+      {loading ? (
+        <div className="flex justify-center items-center h-40">
+          <p className="font-mono text-indigo-600 animate-pulse">Menyusun rak proyek...</p>
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 text-red-600 p-6 rounded-xl text-center font-mono max-w-2xl mx-auto border border-red-100">
+          <p className="font-bold mb-2">Error system</p>
+          <p className="text-sm">{error}</p>
+        </div>
+      ) : projects.length === 0 ? (
+        <div className="text-center p-12 border-2 border-dashed border-gray-200 rounded-2xl max-w-2xl mx-auto">
+          <p className="text-gray-500 font-mono mb-2">Belum ada karya.</p>
+          <p className="text-sm text-gray-400">Silakan tambahkan proyek di Supabase.</p>
+        </div>
+      ) : (
+        /* Projects Grid */
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+          {projects.map((project) => (
+            <div 
+              key={project.id} 
+              className="group flex flex-col justify-between bg-white border border-gray-200 hover:border-indigo-200 hover:shadow-md transition-all duration-300 p-8 rounded-2xl h-full"
+            >
               
+              {/* Bagian Atas: Judul & Deskripsi */}
               <div className="space-y-4">
-                <div className="flex justify-between items-start">
-                  <h2 className="text-2xl font-sans font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                <div className="flex justify-between items-start gap-4">
+                  <h2 className="text-xl font-bold font-sans text-gray-900 group-hover:text-indigo-600 transition-colors">
                     {project.title}
                   </h2>
-                  {/* Link Icons (Opsional) */}
-                  <div className="flex gap-3 text-gray-400">
-                    <a href={project.repoLink} className="hover:text-gray-800 transition-colors" title="View Source">
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                    </a>
-                    <a href={project.demoLink} className="hover:text-indigo-600 transition-colors" title="Live Demo">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
-                    </a>
+                  
+                  {/* Links (GitHub & Live URL) */}
+                  <div className="flex items-center gap-3 text-gray-400">
+                    {project.github_url && (
+                      <Link 
+                        href={project.github_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="hover:text-gray-900 transition-colors"
+                        aria-label="GitHub Repository"
+                      >
+                        <GithubIcon />
+                      </Link>
+                    )}
+                    {project.live_url && (
+                      <Link 
+                        href={project.live_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="hover:text-indigo-600 transition-colors"
+                        aria-label="Live Project"
+                      >
+                        <ExternalLinkIcon />
+                      </Link>
+                    )}
                   </div>
                 </div>
                 
-                <p className="font-mono text-sm text-gray-600 leading-relaxed">
+                <p className="font-sans text-gray-600 leading-relaxed text-sm md:text-base">
                   {project.description}
                 </p>
               </div>
 
-              <div className="pt-6 mt-6 border-t border-gray-100 flex flex-wrap gap-2">
-                {project.tech.map((t, i) => (
-                  <Chip key={i}>{t}</Chip>
+              {/* Bagian Bawah: Tech Stack */}
+              <div className="mt-8 flex flex-wrap gap-2 pt-6 border-t border-gray-100">
+                {project.tech_stack.map((tech, idx) => (
+                  <span 
+                    key={idx} 
+                    className="font-mono text-[10px] uppercase tracking-wider font-bold text-gray-500 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-md"
+                  >
+                    {tech}
+                  </span>
                 ))}
               </div>
 
-            </Card>
-          </motion.div>
-        ))}
-      </section>
+            </div>
+          ))}
+        </section>
+      )}
 
     </div>
   );
