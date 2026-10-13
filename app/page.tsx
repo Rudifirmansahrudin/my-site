@@ -8,17 +8,30 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://dummy.supab
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy-key";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Tipe Data untuk Project
+type Project = {
+  id: string;
+  title: string;
+  description: string;
+  tech_stack: string[];
+  sort_order: number;
+};
+
 export default function Home() {
   const [bioLevel, setBioLevel] = useState(1); // 0: Short, 1: Medium, 2: Long
-  const [stats, setStats] = useState({ booksRead: 0, pagesRead: 0, moviesReviewed: 0, projectsBuilt: 12 });
+  
+  // State untuk Data Live
+  const [stats, setStats] = useState({ booksRead: 0, pagesRead: 0, moviesReviewed: 0, projectsBuilt: 0 });
   const [now, setNow] = useState({ currentBook: "Loading...", latestMovie: "Loading..." });
+  const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(true);
 
-  // Fetch Data Live dari Supabase
+  // Fetch Data Live dari Supabase (Books, Movies, Projects)
   useEffect(() => {
     async function fetchStats() {
       if (supabaseUrl === "https://dummy.supabase.co") return;
 
-      // Ambil Buku
+      // 1. Ambil Buku
       const { data: books } = await supabase.from("books").select("status, pages, title").order("read_date", { ascending: false });
       if (books) {
         const finishedBooks = books.filter(b => b.status?.toLowerCase() === "finished" || b.status?.toLowerCase() === "read");
@@ -31,12 +44,20 @@ export default function Home() {
         else setNow(prev => ({ ...prev, currentBook: "Nggak ada (lagi sibuk ngoding)" }));
       }
 
-      // Ambil Movies
+      // 2. Ambil Movies
       const { data: movies } = await supabase.from("movies").select("title").order("reviewed_at", { ascending: false }).limit(1);
       if (movies && movies.length > 0) {
-        setStats(prev => ({ ...prev, moviesReviewed: movies.length })); // Hitungan kasar, idealnya count()
+        setStats(prev => ({ ...prev, moviesReviewed: movies.length })); 
         setNow(prev => ({ ...prev, latestMovie: movies[0].title }));
       }
+
+      // 3. Ambil Projects
+      const { data: projects, error: projError } = await supabase.from("projects").select("*").order("sort_order", { ascending: true });
+      if (!projError && projects) {
+        setStats(prev => ({ ...prev, projectsBuilt: projects.length })); // Hitung total proyek otomatis
+        setFeaturedProjects(projects.slice(0, 3) as Project[]); // Ambil 3 proyek pertama untuk Featured
+      }
+      setLoadingProjects(false);
     }
     
     fetchStats();
@@ -179,7 +200,7 @@ export default function Home() {
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div className="bg-gray-50 border border-gray-100 p-8 rounded-2xl text-center flex flex-col gap-2 shadow-sm">
-            <span className="text-4xl font-extrabold font-sans text-indigo-600">{stats.projectsBuilt}+</span>
+            <span className="text-4xl font-extrabold font-sans text-indigo-600">{stats.projectsBuilt}</span>
             <span className="font-mono text-[10px] text-gray-500 uppercase tracking-widest">Projects Built</span>
           </div>
           
@@ -200,7 +221,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 5. FEATURED PROJECTS */}
+      {/* 5. FEATURED PROJECTS (Live Data) */}
       <section className="space-y-8">
         <div className="flex justify-between items-end border-b border-gray-200 pb-4">
           <h2 className="text-2xl font-bold font-sans tracking-tight text-gray-900">Featured Projects</h2>
@@ -209,16 +230,42 @@ export default function Home() {
           </Link>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Skeleton Projects Sementara */}
-          {[1, 2, 3].map((num) => (
-            <div key={num} className="bg-gray-50 border border-gray-100 p-6 rounded-2xl shadow-sm">
-              <div className="w-full h-32 bg-gray-200 rounded-lg mb-4"></div>
-              <h3 className="font-bold text-sm font-sans text-gray-900 mb-2">Project Name {num}</h3>
-              <p className="text-xs font-sans text-gray-500">A short description of this awesome project goes here.</p>
-            </div>
-          ))}
-        </div>
+        {loadingProjects ? (
+          <div className="flex justify-center items-center py-10">
+            <p className="font-mono text-gray-400 animate-pulse text-sm">Loading projects...</p>
+          </div>
+        ) : featuredProjects.length === 0 ? (
+          <div className="text-center p-8 border-2 border-dashed border-gray-200 rounded-2xl">
+            <p className="text-gray-500 font-mono text-sm">Belum ada proyek yang ditampilkan.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {featuredProjects.map((project) => (
+              <Link 
+                href="/create" 
+                key={project.id} 
+                className="group bg-white border border-gray-200 hover:border-indigo-300 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col h-full"
+              >
+                <div className="flex-grow space-y-3">
+                  <h3 className="font-bold text-lg font-sans text-gray-900 group-hover:text-indigo-600 transition-colors">{project.title}</h3>
+                  <p className="text-sm font-sans text-gray-600 leading-relaxed line-clamp-3">{project.description}</p>
+                </div>
+                
+                {/* Tech Stack Preview */}
+                <div className="mt-6 flex flex-wrap gap-1.5">
+                  {project.tech_stack.slice(0, 3).map((tech, idx) => (
+                    <span key={idx} className="font-mono text-[9px] uppercase tracking-wider font-bold text-gray-500 bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-md">
+                      {tech}
+                    </span>
+                  ))}
+                  {project.tech_stack.length > 3 && (
+                    <span className="font-mono text-[9px] text-gray-400 py-0.5 px-1">+{project.tech_stack.length - 3}</span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </section>
 
     </div>
