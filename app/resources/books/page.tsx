@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { coverSwatch, hashString, TINT, TINT_EDGE } from "@/lib/palette";
+import { assignStackSwatches, coverSwatch, hashString, TINT, TINT_EDGE } from "@/lib/palette";
 
 type Book = {
   id: number | string;
@@ -194,6 +194,8 @@ export default function BooksPage() {
                 (a, b) => new Date(a.read_date!).getTime() - new Date(b.read_date!).getTime()
               );
               const totalPages = yearBooks.reduce((sum, b) => sum + (b.pages || 0), 0);
+              // Warna tumpukan: gak ada yang sama / mirip berdampingan
+              const swatches = assignStackSwatches(yearBooks);
 
               return (
                 <div key={year} className="flex flex-col items-center justify-end">
@@ -201,8 +203,8 @@ export default function BooksPage() {
                     ref={(el) => { stackRefs.current[year] = el; }}
                     className="relative mb-6 flex w-44 flex-col-reverse items-center"
                   >
-                    {yearBooks.map((book) => {
-                      const sw = coverSwatch(book.title, book.cover_color);
+                    {yearBooks.map((book, i) => {
+                      const sw = swatches[i];
                       const hash = hashString(book.title);
                       const widthPercent = 88 + (hash % 12);
                       const offset = -4 + (hash % 9);
