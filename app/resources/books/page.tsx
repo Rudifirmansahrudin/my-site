@@ -1,178 +1,280 @@
 "use client";
-import { useState } from "react";
-import booksData from "@/content/books.json";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { coverSwatch, hashString, TINT, TINT_EDGE } from "@/lib/palette";
 
-// Fungsi acak konsisten berdasarkan id buku
-const hashString = (str: string) => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  return Math.abs(hash);
+type Book = {
+  id: number | string;
+  created_at: string;
+  title: string;
+  author: string | null;
+  status: string | null;
+  cover_url: string | null;
+  cover_color: string | null; // 'purple' | 'pink' | 'yellow' | 'white' (opsional)
+  pages: number | null;
+  read_date: string | null;
+  notes: string | null;
+  sort_order: number | null;
 };
 
-// 1. Palet warna pastel/light yang lembut dan estetik
-const fallbackColors = [
-  "#FCA5A5", // Light Red / Peach
-  "#FCD34D", // Light Yellow
-  "#86EFAC", // Light Green / Mint
-  "#93C5FD", // Light Blue
-  "#C4B5FD", // Light Purple
-  "#F9A8D4"  // Light Pink
-];
+const CARD_W = 208;
+const CARD_H = 92;
+const GAP = 12;
 
-// 2. Fungsi pintar untuk mencegah warna sama bersebelahan (berdasarkan tumpukan)
-const getSafeColor = (book: any, index: number, allBooks: any[]): string => {
-  // Jika warna sudah didefinisikan di JSON, gunakan warna tersebut
-  if (book.color) return book.color;
+type Tip = { book: Book; left: number; top: number };
 
-  // Tentukan indeks warna dasar dari hash ID
-  let colorIdx = hashString(book.id) % fallbackColors.length;
-  let finalColor = fallbackColors[colorIdx];
+// Posisi kartu: utamakan di ATAS tumpukan, kalau gak muat kanan, kiri, lalu bawah.
+function placeCard(bar: DOMRect, stack: DOMRect) {
+  const vw = window.innerWidth;
+  const clampX = (x: number) => Math.max(GAP, Math.min(x, vw - CARD_W - GAP));
 
-  // Jika ini bukan buku pertama di tumpukan, cek warna buku di bawahnya
-  if (index > 0) {
-    const prevBook = allBooks[index - 1];
-    // Panggil getSafeColor secara rekursif untuk tahu warna pasti dari buku sebelumnya
-    const prevColor = getSafeColor(prevBook, index - 1, allBooks);
+  const aboveTop = stack.top - CARD_H - GAP;
+  if (aboveTop >= GAP) return { left: clampX(bar.left + bar.width / 2 - CARD_W / 2), top: aboveTop };
 
-    // Jika warna ternyata sama persis dengan buku di bawahnya, geser 1 index
-    if (finalColor === prevColor) {
-      finalColor = fallbackColors[(colorIdx + 1) % fallbackColors.length];
-    }
-  }
-  
-  return finalColor;
-};
+  const midY = Math.max(GAP, bar.top + bar.height / 2 - CARD_H / 2);
+  if (bar.right + GAP + CARD_W <= vw - GAP) return { left: bar.right + GAP, top: midY };
+  if (bar.left - GAP - CARD_W >= GAP) return { left: bar.left - GAP - CARD_W, top: midY };
+  return { left: clampX(bar.left + bar.width / 2 - CARD_W / 2), top: stack.bottom + GAP + 48 };
+}
 
 export default function BooksPage() {
+  const [books, setBooks] = useState<Book[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [zoom, setZoom] = useState(0.08);
+  const [tip, setTip] = useState<Tip | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const stackRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const readingBooks = booksData.filter(b => b.status === "reading");
-  const readBooks = booksData.filter(b => b.status === "read");
+  useEffect(() => setMounted(true), []);
 
-  const booksByYear = readBooks.reduce((acc: any, book) => {
-    const year = new Date(book.finishedAt).getFullYear();
-    if (!acc[year]) acc[year] = [];
-    acc[year].push(book);
+  useEffect(() => {
+    async function fetchBooks() {
+      try {
+        const { data, error } = await supabase
+          .from("books")
+          .select("*")
+          .order("sort_order", { ascending: true })
+          .order("read_date", { ascending: false });
+        if (error) throw error;
+        setBooks((data as Book[]) || []);
+      } catch (err) {
+        console.error("Gagal narik data buku:", err);
+        setError(err instanceof Error ? err.message : "Gagal memuat buku.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (isSupabaseConfigured) {
+      fetchBooks();
+    } else {
+      setError("File .env.local belum diisi (NEXT_PUBLIC_SUPABASE_URL dan NEXT_PUBLIC_SUPABASE_ANON_KEY).");
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!tip) return;
+    const close = () => setTip(null);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
+    return () => {
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
+    };
+  }, [tip]);
+
+  const showTip = useCallback((book: Book, year: string, el: HTMLElement) => {
+    const stack = stackRefs.current[year];
+    if (!stack) return;
+    setTip({ book, ...placeCard(el.getBoundingClientRect(), stack.getBoundingClientRect()) });
+  }, []);
+
+  const readingBooks = books.filter((b) => b.status?.toLowerCase() === "reading");
+  const readBooks = books.filter((b) => ["finished", "read"].includes(b.status?.toLowerCase() ?? ""));
+
+  const booksByYear = readBooks.reduce<Record<string, Book[]>>((acc, book) => {
+    if (!book.read_date) return acc;
+    const year = String(new Date(book.read_date).getFullYear());
+    (acc[year] ||= []).push(book);
     return acc;
   }, {});
-
   const years = Object.keys(booksByYear).sort((a, b) => Number(b) - Number(a));
 
   return (
     <div className="space-y-16 pb-24">
-      
-      {/* Bagian Atas: Rak "Currently Reading" */}
+      {/* Currently Reading */}
       <section className="space-y-4">
         <h1 className="text-4xl font-sans font-bold">Books</h1>
         <h2 className="text-xl font-sans font-bold text-gray-700">Currently Reading</h2>
-        <div className="flex gap-6 overflow-x-auto py-2">
-          {readingBooks.map((book, index) => {
-            // Panggil fungsi warna aman di sini
-            const bookColor = getSafeColor(book, index, readingBooks);
 
-            return (
-              <div 
-                key={book.id} 
-                // Catatan: text-white diganti jadi text-gray-900 agar kontras dengan warna pastel
-                className="relative w-36 h-52 rounded-sm shadow-md border border-gray-300 flex items-center justify-center p-4 text-center bg-cover bg-center text-gray-900" 
-                style={{ backgroundColor: bookColor }}
-              >
-                <span className="font-sans font-bold text-sm drop-shadow-sm">{book.title}</span>
-                <div className="absolute -top-3 -right-3 bg-yellow-300 text-yellow-900 text-[10px] font-bold px-2 py-1 rounded-full rotate-12 shadow-sm border border-yellow-400">
-                  Reading
+        {loading ? (
+          <div className="flex h-40 items-center">
+            <p className="text-gray-500 font-mono animate-pulse">Memuat perpustakaan...</p>
+          </div>
+        ) : error ? (
+          <div className="rounded-lg border border-[#F2A9C9] bg-[#FBD3E5] p-4 font-mono text-sm text-gray-900">
+            {error}
+          </div>
+        ) : readingBooks.length === 0 ? (
+          <p className="max-w-md rounded-xl border-2 border-dashed border-gray-200 p-8 font-mono text-sm text-gray-500">
+            Lagi nggak baca buku apa-apa.
+          </p>
+        ) : (
+          // pt/pr ekstra: ruang buat badge yang nongol keluar pojok cover
+          <div className="flex gap-6 overflow-x-auto pt-5 pr-5 pb-3 pl-1">
+            {readingBooks.map((book) => {
+              const sw = coverSwatch(book.title, book.cover_color);
+              // badge kuning, tapi pink kalau cover-nya kuning biar tetap kelihatan
+              const badgeBg = sw.key === "yellow" ? "#FBD3E5" : "#FFF0A8";
+              return (
+                <div key={book.id} className="relative shrink-0 w-36">
+                  <div
+                    className="flex h-52 w-full items-center justify-center overflow-hidden rounded-sm bg-cover bg-center p-4 text-center shadow-md"
+                    style={
+                      book.cover_url
+                        ? { backgroundImage: `url("${book.cover_url}")`, backgroundColor: "#F3F4F6" }
+                        : { backgroundColor: sw.bg, border: `1px solid ${sw.edge}` }
+                    }
+                    role="img"
+                    aria-label={book.title}
+                  >
+                    {!book.cover_url && (
+                      <span className="font-sans text-sm font-bold leading-snug text-gray-900">{book.title}</span>
+                    )}
+                  </div>
+                  <span
+                    className="absolute -top-3 -right-3 z-10 rotate-12 rounded-full border border-gray-900/25 px-2 py-1 text-[10px] font-bold text-gray-900 shadow-sm"
+                    style={{ backgroundColor: badgeBg }}
+                  >
+                    Reading
+                  </span>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </section>
 
-      {/* Bagian Bawah: Grafik Tumpukan Buku */}
-      <section className="space-y-6 pt-6 border-t border-gray-200">
-        <div className="flex justify-between items-center">
+      {/* Stack Graph */}
+      <section className="space-y-6 border-t border-gray-200 pt-6">
+        <div className="flex items-center justify-between">
           <h2 className="text-xl font-sans font-bold">Read Archive & Stack Graph</h2>
-          
-          {/* Kontrol Zoom */}
           <div className="flex items-center gap-2 font-mono text-sm">
-            <span className="text-gray-500 mr-2">Zoom:</span>
-            <button 
-              onClick={() => setZoom(Math.max(0.03, zoom - 0.02))} 
-              className="w-8 h-8 rounded bg-gray-100 hover:bg-gray-200 font-bold flex items-center justify-center"
+            <span className="mr-2 text-gray-500">Zoom:</span>
+            <button
+              onClick={() => setZoom(Math.max(0.03, zoom - 0.02))}
+              className="flex h-8 w-8 items-center justify-center rounded bg-[#DCD0FA] font-bold text-gray-900 transition-colors hover:bg-[#C9B8F5]"
+              aria-label="Perkecil"
             >-</button>
-            <button 
-              onClick={() => setZoom(Math.min(0.2, zoom + 0.02))} 
-              className="w-8 h-8 rounded bg-gray-100 hover:bg-gray-200 font-bold flex items-center justify-center"
+            <button
+              onClick={() => setZoom(Math.min(0.2, zoom + 0.02))}
+              className="flex h-8 w-8 items-center justify-center rounded bg-[#DCD0FA] font-bold text-gray-900 transition-colors hover:bg-[#C9B8F5]"
+              aria-label="Perbesar"
             >+</button>
           </div>
         </div>
 
-        {/* Kotak Grafik Tumpukan */}
-        <div className="bg-[#f1f4f9] border border-gray-200 rounded-[14px] p-8 overflow-x-auto">
-          <div className="flex items-end justify-start gap-16 md:gap-28 min-w-max pt-12 pb-6 px-6">
-            {years.map(year => {
-              const yearBooks = booksByYear[year].sort((a: any, b: any) => new Date(a.finishedAt).getTime() - new Date(b.finishedAt).getTime());
-              const totalPages = yearBooks.reduce((sum: number, b: any) => sum + b.pages, 0);
+        <div
+          className="min-h-[300px] overflow-x-auto rounded-[14px] border p-8"
+          style={{ backgroundColor: TINT, borderColor: TINT_EDGE }}
+          onScroll={() => setTip(null)}
+        >
+          {years.length === 0 && !loading && (
+            <div className="flex h-full items-center justify-center font-mono text-sm text-gray-500">
+              Belum ada buku yang diselesaikan.
+            </div>
+          )}
+
+          <div className="flex min-w-max items-end justify-start gap-16 px-6 pt-32 pb-6 md:gap-28">
+            {years.map((year) => {
+              const yearBooks = [...booksByYear[year]].sort(
+                (a, b) => new Date(a.read_date!).getTime() - new Date(b.read_date!).getTime()
+              );
+              const totalPages = yearBooks.reduce((sum, b) => sum + (b.pages || 0), 0);
 
               return (
                 <div key={year} className="flex flex-col items-center justify-end">
-                  
-                  {/* Tumpukan Buku */}
-                  <div className="relative flex flex-col-reverse items-center w-44 mb-6">
-                    {yearBooks.map((book: any, index: number) => {
-                      const hash = hashString(book.id);
-                      const widthPercent = 88 + (hash % 12); 
-                      const offset = -4 + (hash % 9); 
-                      const height = Math.max(18, book.pages * zoom); 
-                      
-                      // 3. Panggil fungsi pencegah warna ganda di tumpukan
-                      const bookColor = getSafeColor(book, index, yearBooks);
+                  <div
+                    ref={(el) => { stackRefs.current[year] = el; }}
+                    className="relative mb-6 flex w-44 flex-col-reverse items-center"
+                  >
+                    {yearBooks.map((book) => {
+                      const sw = coverSwatch(book.title, book.cover_color);
+                      const hash = hashString(book.title);
+                      const widthPercent = 88 + (hash % 12);
+                      const offset = -4 + (hash % 9);
+                      const height = Math.max(18, (book.pages || 200) * zoom);
+                      const active = tip?.book.id === book.id;
+                      const dimmed = tip !== null && !active;
 
                       return (
-                        <div 
+                        <div
                           key={book.id}
-                          className="group relative flex items-center justify-center border border-black/15 shadow-sm transition-transform hover:scale-105 cursor-pointer rounded-[2px]"
+                          tabIndex={0}
+                          role="button"
+                          aria-label={`${book.title}${book.author ? `, ${book.author}` : ""}`}
+                          onMouseEnter={(e) => showTip(book, year, e.currentTarget)}
+                          onMouseLeave={() => setTip(null)}
+                          onFocus={(e) => showTip(book, year, e.currentTarget)}
+                          onBlur={() => setTip(null)}
+                          onClick={(e) => (active ? setTip(null) : showTip(book, year, e.currentTarget))}
+                          className={`relative flex cursor-pointer items-center justify-center rounded-[2px] shadow-sm outline-none transition-[opacity,box-shadow] duration-150 focus-visible:ring-2 focus-visible:ring-gray-900 ${
+                            active ? "z-10 shadow-lg ring-2 ring-gray-900/70" : ""
+                          } ${dimmed ? "opacity-50" : ""}`}
                           style={{
-                            backgroundColor: bookColor,
+                            backgroundColor: sw.bg,
+                            border: `1px solid ${sw.edge}`,
                             width: `${widthPercent}%`,
                             height: `${height}px`,
-                            transform: `translateX(${offset}px)`,
-                            marginBottom: '-1px'
+                            left: `${offset}px`,
+                            marginBottom: "-1px",
                           }}
                         >
-                          {/* Catatan: Warna teks diubah ke text-gray-900 agar terbaca di atas warna pastel */}
-                          <span className="text-gray-900 font-sans font-bold text-[11px] truncate px-3">
+                          <span className="truncate px-3 font-sans text-[11px] font-bold text-gray-900">
                             {book.title}
                           </span>
-
-                          {/* Tooltip Hover */}
-                          <div className="absolute left-full ml-4 top-1/2 -translate-y-1/2 w-48 bg-white border border-gray-200 p-3 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 pointer-events-none text-left">
-                            <p className="font-sans font-bold text-gray-900 leading-tight mb-1">{book.title}</p>
-                            <p className="font-mono text-[10px] text-gray-500">{book.author}</p>
-                            <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between font-mono text-[9px] text-gray-400">
-                              <span>{book.pages} pages</span>
-                              <span>{new Date(book.finishedAt).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</span>
-                            </div>
-                          </div>
                         </div>
                       );
                     })}
-                    {/* Garis Dasar Meja */}
-                    <div className="w-[130%] h-1.5 bg-gray-300 rounded-full absolute -bottom-3"></div>
+                    <div className="absolute -bottom-3 h-1.5 w-[130%] rounded-full bg-gray-300"></div>
                   </div>
 
-                  {/* Label Tahun di Bawah */}
-                  <div className="text-center font-mono text-xs text-gray-600 bg-white/80 backdrop-blur-sm px-4 py-1.5 rounded-full border border-gray-200 shadow-sm">
-                    <span className="font-bold text-gray-900 text-sm mr-2">{year}</span>
+                  <div className="rounded-full border border-gray-200 bg-white px-4 py-1.5 text-center font-mono text-xs text-gray-600 shadow-sm">
+                    <span className="mr-2 text-sm font-bold text-gray-900">{year}</span>
                     <span className="text-gray-400">|</span>
                     <span className="ml-2">{yearBooks.length} books ({totalPages}p)</span>
                   </div>
-
                 </div>
               );
             })}
           </div>
         </div>
       </section>
+
+      {/* Tooltip: portal ke body, fixed, selalu paling depan & gak kepotong */}
+      {mounted && tip &&
+        createPortal(
+          <div
+            role="tooltip"
+            className="pointer-events-none fixed z-[9999] rounded-lg border bg-white p-3 shadow-xl"
+            style={{ left: tip.left, top: tip.top, width: CARD_W, borderColor: TINT_EDGE }}
+          >
+            <p className="mb-1 font-sans font-bold leading-tight text-gray-900">{tip.book.title}</p>
+            <p className="font-mono text-[10px] text-gray-500">{tip.book.author || "Unknown Author"}</p>
+            <div className="mt-2 flex justify-between border-t border-gray-100 pt-2 font-mono text-[10px] text-gray-500">
+              <span>{tip.book.pages || "?"} pages</span>
+              <span>
+                {tip.book.read_date
+                  ? new Date(tip.book.read_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                  : ""}
+              </span>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
