@@ -74,6 +74,7 @@ export default function Navbar() {
             <div className="absolute top-full right-0 mt-0 w-32 bg-white border border-gray-100 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col py-2">
               <Link href="/about" className="px-4 py-2 hover:bg-gray-50">Journey</Link>
               <Link href="/about#hobbies" className="px-4 py-2 hover:bg-gray-50">Hobbies</Link>
+              <Link href="/about/wall" className="px-4 py-2 hover:bg-gray-50">Wall</Link>
             </div>
           </div>
         </div>
@@ -121,6 +122,7 @@ export default function Navbar() {
               <div className="flex flex-col gap-3 pl-4 border-l-2 border-indigo-100 text-gray-500">
                 <Link href="/about" onClick={() => setMobileMenuOpen(false)}>Journey</Link>
                 <Link href="/about#hobbies" onClick={() => setMobileMenuOpen(false)}>Hobbies</Link>
+                <Link href="/about/wall" onClick={() => setMobileMenuOpen(false)}>Wall</Link>
               </div>
             )}
           </div>
