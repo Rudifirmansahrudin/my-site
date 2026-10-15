@@ -127,7 +127,7 @@ function MovieCard({ movie, compact = false }: { movie: Movie; compact?: boolean
           <div className="mt-3 border-l-2 border-[#B9A5F0] pl-3">
             <p
               className={`font-sans italic leading-relaxed text-gray-600 ${
-                compact ? "line-clamp-2 text-xs" : "line-clamp-3 text-sm"
+                compact ? "text-xs" : "line-clamp-3 text-sm"
               }`}
             >
               “{movie.verdict}”
