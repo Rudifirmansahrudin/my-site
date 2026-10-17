@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation"; // TAMBAHAN: Untuk deteksi halaman aktif
+import PageTransition from "@/components/PageTransition";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -20,6 +21,7 @@ export default function Navbar() {
   }, []);
 
   return (
+    <>
     <nav className={`fixed top-0 w-full z-50 transition-all duration-300 bg-white/90 backdrop-blur-md border-b ${scrolled ? "py-3 border-gray-200" : "py-6 border-transparent"}`}>
       <div className="container mx-auto px-6 flex justify-between items-center">
         {/* Logo Text */}
@@ -129,5 +131,7 @@ export default function Navbar() {
         </div>
       )}
     </nav>
+    <PageTransition />
+    </>
   );
 }
