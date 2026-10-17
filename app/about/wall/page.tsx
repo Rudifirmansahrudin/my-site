@@ -276,7 +276,7 @@ export default async function WallPage() {
         )}
 
         {collage.length > 0 && (
-          <ul className={`columns-2 gap-6 sm:columns-3 ${collage.length > 9 ? "lg:columns-4" : ""}`}>
+          <ul className={`columns-2 gap-6 sm:columns-3 ${collage.length > 9 ? "lg:columns-4" ${frames.length > 0 ? "mt-20": ""}`}>
             {collage.map((c) => (
               <li key={c.id} className="mb-8 break-inside-avoid">
                 {c.kind === "sticky" ? <Sticky item={c} /> : <PosterItem item={c} />}
