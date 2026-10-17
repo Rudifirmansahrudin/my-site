@@ -9,7 +9,7 @@ const hand = Caveat({ subsets: ["latin"], display: "swap" });
 // Ganti / tambah kalimat sesuka lu. Berganti tiap ~1,8 detik.
 const MESSAGES = [
   "Sabar cantikk 💗",
-  "Lagi dandan dulu bentar ✨",
+  "Rawrr ✨",
   "Dikit lagi kok, janji 🌸",
   "Lagi ngumpulin yang lucu-lucu 🍓",
 ];
