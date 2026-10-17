@@ -1,8 +1,36 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation"; // TAMBAHAN: Untuk deteksi halaman aktif
 import PageTransition from "@/components/PageTransition";
+
+// Menu dropdown desktop: satu daftar, dipakai untuk Resources & About
+const DROPDOWNS = [
+  {
+    label: "Resources",
+    base: "/resources",
+    align: "left",
+    width: "w-40",
+    items: [
+      { label: "Books", href: "/resources/books" },
+      { label: "Movies", href: "/resources/movies" },
+      { label: "Gaming", href: "/resources/games" },
+      { label: "Bookmarks", href: "/resources/bookmarks" },
+      { label: "Media Kit", href: "/resources/media-kit" },
+    ],
+  },
+  {
+    label: "About",
+    base: "/about",
+    align: "right",
+    width: "w-32",
+    items: [
+      { label: "Journey", href: "/about" },
+      { label: "Hobbies", href: "/about#hobbies" },
+      { label: "Wall", href: "/about/wall" },
+    ],
+  },
+];
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -12,12 +40,32 @@ export default function Navbar() {
   const [resOpen, setResOpen] = useState(false);
   const [aboutOpen, setAboutOpen] = useState(false);
 
+  // Dropdown desktop: terbuka lewat hover (mouse) ATAU tap/klik (layar sentuh, keyboard)
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const lastPointer = useRef("mouse");
+
   const pathname = usePathname(); // Deteksi URL saat ini
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenu(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenMenu(null);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
   }, []);
 
   return (
@@ -38,47 +86,75 @@ export default function Navbar() {
         </button>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-8 font-mono text-[13px] tracking-widest uppercase">
-          <Link href="/postcards" className={`transition-colors ${pathname === "/postcards" ? "text-indigo-600 font-bold" : "hover:text-indigo-600"}`}>
+        <div ref={menuRef} className="hidden md:flex items-center gap-8 font-mono text-[13px] tracking-widest uppercase">
+          <Link href="/postcards" onClick={() => setOpenMenu(null)} className={`transition-colors ${pathname === "/postcards" ? "text-indigo-600 font-bold" : "hover:text-indigo-600"}`}>
             Postcards
           </Link>
           
           {/* Menu Speaking di-hide sementara */}
           {/* <Link href="/speaking" className="hover:text-indigo-600 transition-colors">Speaking</Link> */}
           
-          <Link href="/create" className={`transition-colors ${pathname === "/create" ? "text-indigo-600 font-bold" : "hover:text-indigo-600"}`}>
+          <Link href="/create" onClick={() => setOpenMenu(null)} className={`transition-colors ${pathname === "/create" ? "text-indigo-600 font-bold" : "hover:text-indigo-600"}`}>
             Create
           </Link>
           
-          <Link href="/writing" className={`transition-colors ${pathname === "/writing" ? "text-indigo-600 font-bold" : "hover:text-indigo-600"}`}>
+          <Link href="/writing" onClick={() => setOpenMenu(null)} className={`transition-colors ${pathname === "/writing" ? "text-indigo-600 font-bold" : "hover:text-indigo-600"}`}>
             Writing
           </Link>
       
-          {/* Dropdown Resources */}
-          <div className="relative group cursor-pointer py-2">
-            <span className={`transition-colors flex items-center gap-1 ${pathname.startsWith("/resources") ? "text-indigo-600 font-bold" : "hover:text-indigo-600"}`}>
-              Resources <span className="text-[9px]">▼</span>
-            </span>
-            <div className="absolute top-full left-0 mt-0 w-40 bg-white border border-gray-100 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col py-2">
-              <Link href="/resources/books" className="px-4 py-2 hover:bg-gray-50">Books</Link>
-              <Link href="/resources/movies" className="px-4 py-2 hover:bg-gray-50">Movies</Link>
-              <Link href="/resources/games" className="px-4 py-2 hover:bg-gray-50">Gaming</Link>
-              <Link href="/resources/bookmarks" className="px-4 py-2 hover:bg-gray-50">Bookmarks</Link>
-              <Link href="/resources/media-kit" className="px-4 py-2 hover:bg-gray-50">Media Kit</Link>
-            </div>
-          </div>
-
-          {/* Dropdown About */}
-          <div className="relative group cursor-pointer py-2">
-            <span className={`transition-colors flex items-center gap-1 ${pathname.startsWith("/about") ? "text-indigo-600 font-bold" : "hover:text-indigo-600"}`}>
-              About <span className="text-[9px]">▼</span>
-            </span>
-            <div className="absolute top-full right-0 mt-0 w-32 bg-white border border-gray-100 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all flex flex-col py-2">
-              <Link href="/about" className="px-4 py-2 hover:bg-gray-50">Journey</Link>
-              <Link href="/about#hobbies" className="px-4 py-2 hover:bg-gray-50">Hobbies</Link>
-              <Link href="/about/wall" className="px-4 py-2 hover:bg-gray-50">Wall</Link>
-            </div>
-          </div>
+          {/* Dropdown desktop: hover (mouse) + tap/klik (sentuh) + keyboard */}
+          {DROPDOWNS.map((d) => {
+            const open = openMenu === d.label;
+            const active = pathname.startsWith(d.base);
+            return (
+              <div
+                key={d.label}
+                className="relative py-2"
+                onPointerDown={(e) => {
+                  lastPointer.current = e.pointerType;
+                }}
+                onPointerEnter={(e) => {
+                  if (e.pointerType === "mouse") setOpenMenu(d.label);
+                }}
+                onPointerLeave={(e) => {
+                  if (e.pointerType === "mouse") setOpenMenu((m) => (m === d.label ? null : m));
+                }}
+                onBlur={(e) => {
+                  // fokus keyboard keluar dari menu ini -> tutup
+                  if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+                    setOpenMenu((m) => (m === d.label ? null : m));
+                  }
+                }}
+              >
+                <button
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={open}
+                  // mouse: hover sudah membuka, klik tetap terbuka. Sentuh: klik = buka/tutup.
+                  onClick={() => setOpenMenu(lastPointer.current === "mouse" ? d.label : open ? null : d.label)}
+                  className={`transition-colors flex cursor-pointer items-center gap-1 ${active ? "text-indigo-600 font-bold" : "hover:text-indigo-600"}`}
+                >
+                  {d.label} <span className="text-[9px]">▼</span>
+                </button>
+                <div
+                  className={`absolute top-full ${d.align === "right" ? "right-0" : "left-0"} mt-0 ${d.width} bg-white border border-gray-100 rounded-lg shadow-xl transition-all flex flex-col py-2 ${
+                    open ? "opacity-100 visible" : "opacity-0 invisible"
+                  }`}
+                >
+                  {d.items.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setOpenMenu(null)}
+                      className="px-4 py-2 hover:bg-gray-50"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
