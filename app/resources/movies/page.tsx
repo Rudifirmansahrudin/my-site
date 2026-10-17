@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { coverSwatch, TINT, TINT_EDGE } from "@/lib/palette";
+import UpNextGrid from "@/components/UpNextGrid";
 
 // Matikan cache: review baru langsung muncul tanpa nunggu
 export const dynamic = "force-dynamic";
@@ -136,7 +137,7 @@ function MovieCard({ movie, compact = false }: { movie: Movie; compact?: boolean
         )}
 
         <p
-          className={`mt-auto pt-4 font-mono uppercase tracking-widest ${compact ? "text-[10px]" : "text-xs"} ${
+          className={`mt-auto pt-4 font-mono uppercase tracking-widest ${ ? "text-[10px]" : "text-xs"} ${
             reviewed
               ? "font-bold text-gray-900 underline decoration-[#B9A5F0] decoration-2 underline-offset-4 group-hover:decoration-gray-900"
               : "text-gray-400"
@@ -212,21 +213,21 @@ function Featured({ movie }: { movie: Movie }) {
   );
 }
 
-function Grid({ title, list, compact = false }: { title: string; list: Movie[]; compact?: boolean }) {
+function Grid({ title, list,  = false }: { title: string; list: Movie[]; ?: boolean }) {
   if (list.length === 0) return null;
   return (
     <section className="space-y-6">
       <h2 className="font-sans text-xl font-bold tracking-tight text-gray-900">{title}</h2>
       <ul
         className={
-          compact
+          
             ? "grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 lg:grid-cols-5" // kartu lebih kecil
             : "grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-4"
         }
       >
         {list.map((m) => (
           <li key={m.id} className="flex">
-            <MovieCard movie={m} compact={compact} />
+            <MovieCard movie={m} ={} />
           </li>
         ))}
       </ul>
@@ -278,7 +279,7 @@ export default async function MoviesPage() {
       {/* Otomatis muncul begitu ada film yang sudah punya review (artikel atau link) */}
       {latest && <Featured movie={latest} />}
       <Grid title="All reviews" list={rest} />
-      <Grid title="Up next" list={upNext} compact />
+      <UpNextGrid movies={upNext} />
     </div>
   );
 }
