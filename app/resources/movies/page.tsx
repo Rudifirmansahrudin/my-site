@@ -1,4 +1,4 @@
-// app/movies/page.tsx  (server component: data diambil dari Supabase, selalu fresh)
+// app/resources/movies/page.tsx  →  URL: /resources/movies  (server component: data diambil dari Supabase, selalu fresh)
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -7,6 +7,9 @@ import UpNextGrid from "@/components/UpNextGrid";
 
 // Matikan cache: review baru langsung muncul tanpa nunggu
 export const dynamic = "force-dynamic";
+
+// Alamat dasar halaman Movies (harus sama dengan lokasi folder + link di Navbar)
+const MOVIES_BASE = "/resources/movies";
 
 export const metadata = {
   title: "Movies",
@@ -32,7 +35,7 @@ type Movie = {
 };
 
 // Artikel di web sendiri (/movies/<slug>) menang; kalau gak ada, pakai link luar.
-const reviewHref = (m: Movie) => (m.has_article ? `/movies/${m.slug}` : m.review_url);
+const reviewHref = (m: Movie) => (m.has_article ? `${MOVIES_BASE}/${m.slug}` : m.review_url);
 
 const isVideoOnly = (m: Movie) => !m.has_article && m.review_format === "video";
 
@@ -99,7 +102,7 @@ function Poster({
   );
 }
 
-function MovieCard({ movie, compact = false }: { movie: Movie; compact?: boolean }) {
+function MovieCard({ movie }: { movie: Movie }) {
   const href = reviewHref(movie);
   const reviewed = Boolean(href);
   return (
@@ -107,16 +110,16 @@ function MovieCard({ movie, compact = false }: { movie: Movie; compact?: boolean
       <Poster
         movie={movie}
         showRating={reviewed}
-        size={compact ? "sm" : "md"}
+        size="md"
         className={`motion-safe:transition-transform motion-safe:duration-300 ${
           reviewed
             ? "motion-safe:group-hover:-translate-y-2 motion-safe:group-hover:shadow-xl"
             : "opacity-90 motion-safe:group-hover:-translate-y-1"
         }`}
       />
-      <div className={`flex flex-grow flex-col ${compact ? "mt-3" : "mt-4"}`}>
+      <div className="mt-4 flex flex-grow flex-col">
         <h3
-          className={`line-clamp-2 font-sans font-bold leading-snug text-gray-900 ${compact ? "text-base" : "text-lg"}`}
+          className="line-clamp-2 font-sans text-lg font-bold leading-snug text-gray-900"
         >
           {movie.title}
         </h3>
@@ -127,9 +130,7 @@ function MovieCard({ movie, compact = false }: { movie: Movie; compact?: boolean
         {movie.verdict && (
           <div className="mt-3 border-l-2 border-[#B9A5F0] pl-3">
             <p
-              className={`font-sans italic leading-relaxed text-gray-600 ${
-                compact ? "text-xs" : "line-clamp-3 text-sm"
-              }`}
+              className="line-clamp-3 font-sans text-sm italic leading-relaxed text-gray-600"
             >
               “{movie.verdict}”
             </p>
@@ -137,7 +138,7 @@ function MovieCard({ movie, compact = false }: { movie: Movie; compact?: boolean
         )}
 
         <p
-          className={`mt-auto pt-4 font-mono uppercase tracking-widest ${ ? "text-[10px]" : "text-xs"} ${
+          className={`mt-auto pt-4 font-mono text-xs uppercase tracking-widest ${
             reviewed
               ? "font-bold text-gray-900 underline decoration-[#B9A5F0] decoration-2 underline-offset-4 group-hover:decoration-gray-900"
               : "text-gray-400"
@@ -213,21 +214,15 @@ function Featured({ movie }: { movie: Movie }) {
   );
 }
 
-function Grid({ title, list,  = false }: { title: string; list: Movie[]; ?: boolean }) {
+function Grid({ title, list }: { title: string; list: Movie[] }) {
   if (list.length === 0) return null;
   return (
     <section className="space-y-6">
       <h2 className="font-sans text-xl font-bold tracking-tight text-gray-900">{title}</h2>
-      <ul
-        className={
-          
-            ? "grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 lg:grid-cols-5" // kartu lebih kecil
-            : "grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-4"
-        }
-      >
+      <ul className="grid grid-cols-2 gap-x-6 gap-y-12 sm:grid-cols-3 lg:grid-cols-4">
         {list.map((m) => (
           <li key={m.id} className="flex">
-            <MovieCard movie={m} ={} />
+            <MovieCard movie={m} />
           </li>
         ))}
       </ul>
