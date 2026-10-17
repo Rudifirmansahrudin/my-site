@@ -247,7 +247,7 @@ export default function BooksPage() {
                   <div className="rounded-full border border-gray-200 bg-white px-4 py-1.5 text-center font-mono text-xs text-gray-600 shadow-sm">
                     <span className="mr-2 text-sm font-bold text-gray-900">{year}</span>
                     <span className="text-gray-400">|</span>
-                    <span className="ml-2">{yearBooks.length} books ({totalPages}p)</span>
+                    <span className="ml-2">{yearBooks.length} {yearBooks.length === 1 ? "book" : "books"} ({totalPages}p)</span>
                   </div>
                 </div>
               );
